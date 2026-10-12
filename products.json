@@ -1,0 +1,141 @@
+{
+  "settings": {
+    "whatsapp": "2340000000000",
+    "paystackKey": "",
+    "instagram": "https://www.instagram.com/zeeha_ng",
+    "tiktok": "https://www.tiktok.com/@zeeha_ng",
+    "email": "",
+    "delivery": [
+      {
+        "name": "Abuja",
+        "fee": 3000,
+        "eta": "2 to 3 working days"
+      },
+      {
+        "name": "Lagos",
+        "fee": 4500,
+        "eta": "2 to 3 working days"
+      },
+      {
+        "name": "Other states in Nigeria",
+        "fee": 6000,
+        "eta": "2 to 3 working days"
+      }
+    ],
+    "phone": ""
+  },
+  "products": [
+    {
+      "id": "p1",
+      "name": "Noor Open Abaya",
+      "category": "Kimonos",
+      "price": 45000,
+      "colors": [
+        "Black",
+        "Burgundy",
+        "Sand"
+      ],
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "stock": 12,
+      "images": [],
+      "desc": "A flowing open-front abaya in soft crepe with a clean, tailored drape. Pair it with your favourite inner dress."
+    },
+    {
+      "id": "p2",
+      "name": "Rosa Embroidered Abaya",
+      "category": "Kimonos",
+      "price": 62000,
+      "colors": [
+        "Black",
+        "Blush"
+      ],
+      "sizes": [
+        "S",
+        "M",
+        "L"
+      ],
+      "stock": 6,
+      "images": [],
+      "desc": "Hand-finished floral embroidery along the cuffs and front. Made for Eid, weddings and special occasions."
+    },
+    {
+      "id": "p3",
+      "name": "Layla Kimono Abaya",
+      "category": "Kimonos",
+      "price": 52000,
+      "colors": [
+        "Burgundy",
+        "Cream"
+      ],
+      "sizes": [
+        "M",
+        "L",
+        "XL"
+      ],
+      "stock": 8,
+      "images": [],
+      "desc": "A light kimono-cut abaya with wide sleeves and a relaxed fit for everyday wear."
+    },
+    {
+      "id": "p4",
+      "name": "Amira Two-Piece Set",
+      "category": "Two piece sets",
+      "price": 48000,
+      "colors": [
+        "Sand",
+        "Blush",
+        "Black"
+      ],
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "stock": 10,
+      "images": [],
+      "desc": "A matching long top and wide-leg skirt set in breathable fabric. Easy to style, comfortable all day."
+    },
+    {
+      "id": "p5",
+      "name": "Hana Maxi Dress",
+      "category": "Dresses",
+      "price": 38000,
+      "colors": [
+        "Burgundy",
+        "Cream"
+      ],
+      "sizes": [
+        "S",
+        "M",
+        "L"
+      ],
+      "stock": 0,
+      "images": [],
+      "desc": "A full-length maxi dress with gentle gathers and long sleeves."
+    },
+    {
+      "id": "p6",
+      "name": "Silk Chiffon Hijab",
+      "category": "Scarves",
+      "price": 9500,
+      "colors": [
+        "Blush",
+        "Burgundy",
+        "Black",
+        "Sand"
+      ],
+      "sizes": [
+        "One size"
+      ],
+      "stock": 40,
+      "images": [],
+      "desc": "A soft, lightweight chiffon hijab that holds its shape and drapes beautifully."
+    }
+  ]
+}
