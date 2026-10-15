@@ -45,7 +45,8 @@ function draw(){
  <div><label>TikTok link</label><input data-s="tiktok" value="${esc(s.tiktok)}"></div>
  <div><label>Phone number (shown on the site)</label><input data-s="phone" value="${esc(s.phone)}"></div>
  <div><label>Email (shown on the site)</label><input data-s="email" value="${esc(s.email)}"></div>
- <div class="f"><label>Delivery options (one per line: Area | fee | time)</label><textarea rows="4" id="dv">${esc((s.delivery||[]).map(d=>`${d.name} | ${d.fee} | ${d.eta}`).join('\n'))}</textarea></div>`;
+ <div class="f"><label>Delivery options (one per line: Area | fee | time)</label><textarea rows="4" id="dv">${esc((s.delivery||[]).map(d=>`${d.name} | ${d.fee} | ${d.eta}`).join('\n'))}</textarea></div>
+ <div class="f"><label>Customer accounts: paste your Firebase config here (see FIREBASE-SETUP.md). Leave empty to switch accounts off.</label><textarea rows="7" id="fb">${esc(s.firebase?JSON.stringify(s.firebase,null,2):'')}</textarea></div>`;
  $('#list').innerHTML=D.products.map((p,i)=>`<div class="p" data-i="${i}">
  <div><label>Name</label><input data-k="name" value="${esc(p.name)}"></div>
  <div><label>Collection / category (Kimonos, Dresses, Scarves, Two piece sets)</label><input data-k="category" value="${esc(p.category)}"></div>
@@ -61,6 +62,7 @@ const list=v=>v.split(/[,\n]/).map(x=>x.trim()).filter(Boolean);
 document.addEventListener('input',e=>{
  const t=e.target;
  if(t.dataset.s)D.settings[t.dataset.s]=t.value.trim();
+ if(t.id==='fb'){const o={};[...t.value.matchAll(/["']?(\w+)["']?\s*:\s*["']([^"']+)["']/g)].forEach(m=>o[m[1]]=m[2]);if(o.apiKey)D.settings.firebase=o;else delete D.settings.firebase}
  if(t.id==='dv')D.settings.delivery=t.value.split('\n').map(l=>l.split('|').map(x=>x.trim())).filter(a=>a[0]).map(a=>({name:a[0],fee:+a[1]||0,eta:a[2]||''}));
  if(t.dataset.k){
   const p=D.products[+t.closest('.p').dataset.i],k=t.dataset.k,v=t.value;

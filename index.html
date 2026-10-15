@@ -100,6 +100,10 @@ input,select,textarea{width:100%;padding:11px 12px;border:1px solid #d9aeb0;back
 .lb{position:fixed;inset:0;z-index:60;background:rgba(42,18,24,.85);display:none;place-items:center;padding:16px;cursor:zoom-out}
 .lb.open{display:grid}
 .lb img{max-height:94vh;max-width:100%;object-fit:contain}
+.pop{position:fixed;z-index:50;inset:5vh 0;margin:auto;max-width:460px;height:fit-content;max-height:90vh;overflow:auto;background:var(--cream);padding:30px 26px;display:none}
+.pop.open{display:block}
+.pop h2{font-size:2.1rem}
+#acctBtn{max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .msg{padding:50px 10px;text-align:center}
 @media(max-width:820px){
  section{padding:56px 0}
@@ -110,6 +114,9 @@ input,select,textarea{width:100%;padding:11px 12px;border:1px solid #d9aeb0;back
  .hero .wrap{padding-top:30px;min-height:0}
  .modal{grid-template-columns:1fr;inset:0;max-height:100vh}
  .grid{grid-template-columns:repeat(2,1fr);gap:22px 12px}
+ .brand{font-size:1.4rem;letter-spacing:.22em}
+ .cartbtn{padding:7px 10px}
+ .rt{gap:8px}
  .ph .z{font-size:4.5rem}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
@@ -121,7 +128,7 @@ input,select,textarea{width:100%;padding:11px 12px;border:1px solid #d9aeb0;back
  <nav id="nav">
   <a href="#shop">Shop</a><a href="#about">About</a><a href="#delivery">Delivery</a><a href="#contact">Contact</a>
  </nav>
- <div class="rt"><button class="cartbtn" id="cartOpen">Bag (<span id="cnt">0</span>)</button><button class="menu" id="menu" aria-label="Menu">&#9776;</button></div>
+ <div class="rt"><button class="cartbtn" id="acctBtn" hidden>Log in</button><button class="cartbtn" id="cartOpen">Bag (<span id="cnt">0</span>)</button><button class="menu" id="menu" aria-label="Menu">&#9776;</button></div>
 </div></header>
 
 <main id="top">
@@ -179,6 +186,7 @@ input,select,textarea{width:100%;padding:11px 12px;border:1px solid #d9aeb0;back
 <div class="lb" id="lb" role="dialog" aria-label="Size guide"><img src="sizeguide.png" alt="Zeeha size chart"></div>
 <div class="ov" id="ov"></div>
 <div class="modal" id="modal" role="dialog" aria-modal="true"></div>
+<div class="pop" id="acct" role="dialog" aria-modal="true" aria-label="Account"></div>
 <aside class="drawer" id="drawer" aria-label="Shopping bag">
  <header><h2>Your bag</h2><button class="x" style="position:static" id="cartClose" aria-label="Close">&times;</button></header>
  <div class="dbody" id="dbody"></div>
@@ -202,7 +210,7 @@ function init(){
  ['#cWa','#waFloat'].forEach(s=>$(s).href=wa('Hello Zeeha, I have a question.'));
  $('#cIg').href=S.instagram;$('#cTt').href=S.tiktok;
  $('#cinfo').innerHTML=[S.phone?`Phone: <a href="tel:${esc(S.phone.replace(/\s/g,''))}">${esc(S.phone)}</a>`:'',S.email?`Email: <a href="mailto:${esc(S.email)}">${esc(S.email)}</a>`:''].filter(Boolean).join('<br>');
-  drawShop();save();
+  drawShop();save();initAccount();
 }
 function drawShop(){
  const cats=['All',...new Set(P.map(p=>p.category))];
@@ -244,7 +252,7 @@ $('#modal').onclick=e=>{
   save();closeAll();step='cart';drawCart();openCart();
  }
 };
-function closeAll(){['#modal','#drawer','#ov','#lb'].forEach(s=>$(s).classList.remove('open'))}
+function closeAll(){['#modal','#drawer','#ov','#lb','#acct'].forEach(s=>$(s).classList.remove('open'))}
 function openCart(){$('#drawer').classList.add('open');$('#ov').classList.add('open')}
 $('#ov').onclick=closeAll;$('#lb').onclick=()=>$('#lb').classList.remove('open');$('#fsg').onclick=()=>$('#lb').classList.add('open');$('#cartClose').onclick=closeAll;
 $('#cartOpen').onclick=()=>{step='cart';drawCart();openCart();$('#nav').classList.remove('open')};
@@ -263,7 +271,7 @@ function drawCart(){
   $('#dbody').innerHTML=L.map(i=>`<div class="item"><div class="ph">${pic(i.p)}</div><div><b>${esc(i.p.name)}</b><small>${esc(i.color)} / ${esc(i.size)} / Qty ${i.q}</small><button class="rm" data-rm="${esc(i.k)}">Remove</button></div><div>${fmt(i.p.price*i.q)}</div></div>`).join('');
   $('#dfoot').innerHTML=`<div class="tot big"><span>Subtotal</span><span>${fmt(sub())}</span></div><button class="btn" id="go" style="width:100%">Checkout</button><p class="note">Delivery is added at checkout.</p>`;
  }else{
-  $('#dbody').innerHTML=`<label>Full name</label><input id="fn" autocomplete="name">
+  $('#dbody').innerHTML=`${ZA&&!user?'<p class="note">Have an account? <a href="#" id="loginHint">Log in</a> to fill in your details and keep this order in your history.</p>':''}<label>Full name</label><input id="fn" autocomplete="name">
   <label>Phone number</label><input id="ph" type="tel" autocomplete="tel">
   <label>Email</label><input id="em" type="email" autocomplete="email">
   <label>Delivery area</label><select id="zn">${S.delivery.map((d,i)=>`<option value="${i}">${esc(d.name)} (${fmt(d.fee)}, ${esc(d.eta)})</option>`).join('')}</select>
@@ -273,13 +281,14 @@ function drawCart(){
   <button class="btn" id="pay" style="width:100%">Pay now</button>
   <button class="btn ghost" id="wao" style="width:100%;margin-top:8px">Order on WhatsApp instead</button>
   <button class="rm" id="back" style="background:none;border:0;margin-top:10px;text-decoration:underline;cursor:pointer;color:var(--wine)">Back to bag</button>`;
+  if(user){$('#fn').value=prof.name||'';$('#ph').value=prof.phone||'';$('#em').value=user.email||'';$('#ad').value=prof.address||'';if(prof.zone!=null&&S.delivery[prof.zone])$('#zn').value=prof.zone}
   upd();
  }
 }
 const fee=()=>S.delivery[+($('#zn')?.value||0)].fee;
 function upd(){$('#df').textContent=fmt(fee());$('#tt').textContent=fmt(sub()+fee())}
 function form(){
- const f={n:$('#fn').value.trim(),p:$('#ph').value.trim(),e:$('#em').value.trim(),a:$('#ad').value.trim(),z:S.delivery[+$('#zn').value]};
+ const f={n:$('#fn').value.trim(),p:$('#ph').value.trim(),e:$('#em').value.trim(),a:$('#ad').value.trim(),z:S.delivery[+$('#zn').value],zi:+$('#zn').value};
  if(!f.n||!f.p||!f.a||!/^\S+@\S+\.\S+$/.test(f.e)){$('#ferr').textContent='Please fill in your name, phone, a valid email and your address.';return null}
  return f;
 }
@@ -287,26 +296,119 @@ function summary(f){
  return `New Zeeha order\n`+lines().map(i=>`- ${i.p.name} (${i.color}, ${i.size}) x${i.q}: ${fmt(i.p.price*i.q)}`).join('\n')+`\nSubtotal: ${fmt(sub())}\nDelivery (${f.z.name}): ${fmt(f.z.fee)}\nTotal: ${fmt(sub()+f.z.fee)}\n\nName: ${f.n}\nPhone: ${f.p}\nAddress: ${f.a}`;
 }
 function done(msg,f){
- step='done';cart=[];save();
+ step='done';const sm=summary(f);cart=[];save();
  $('#dbody').innerHTML=`<div class="msg"><h2>Thank you</h2><p style="margin-top:10px">${msg}</p></div>`;
- $('#dfoot').innerHTML=`<a class="btn" target="_blank" rel="noopener" style="width:100%;text-align:center" href="${wa(summary(f))}">Send order details on WhatsApp</a>`;
+ $('#dfoot').innerHTML=`<a class="btn" target="_blank" rel="noopener" style="width:100%;text-align:center" href="${wa(sm)}">Send order details on WhatsApp</a>`;
 }
 $('#drawer').onclick=e=>{
  const t=e.target;
+ if(t.id==='loginHint'){e.preventDefault();closeAll();openAcct()}
  if(t.dataset.rm){cart=cart.filter(i=>i.k!==t.dataset.rm);save();drawCart()}
  if(t.id==='go'){step='form';drawCart()}
  if(t.id==='back'){step='cart';drawCart()}
- if(t.id==='wao'){const f=form();if(f){window.open(wa(summary(f)),'_blank');}}
+ if(t.id==='wao'){const f=form();if(f){saveOrder(f,'Sent on WhatsApp, awaiting payment');window.open(wa(summary(f)),'_blank');}}
  if(t.id==='pay'){
   const f=form();if(!f)return;
-  const total=sub()+f.z.fee;
+  const total=sub()+f.z.fee,rf='ZEEHA-'+Date.now();
   if(!S.paystackKey||!window.PaystackPop){$('#ferr').textContent='Card payment is not switched on yet. Please use "Order on WhatsApp instead".';return}
-  PaystackPop.setup({key:S.paystackKey,email:f.e,amount:total*100,currency:'NGN',ref:'ZEEHA-'+Date.now(),
+  PaystackPop.setup({key:S.paystackKey,email:f.e,amount:total*100,currency:'NGN',ref:rf,
    metadata:{custom_fields:[{display_name:'Name',variable_name:'name',value:f.n},{display_name:'Phone',variable_name:'phone',value:f.p},{display_name:'Address',variable_name:'address',value:f.a},{display_name:'Order',variable_name:'order',value:lines().map(i=>`${i.p.name} ${i.color} ${i.size} x${i.q}`).join('; ')}]},
-   callback:()=>done('Your payment was received. We will pack your order and message you when it ships.',f),onClose:()=>{}}).openIframe();
+   callback:()=>{saveOrder(f,'Paid online',rf);done('Your payment was received. We will pack your order and message you when it ships.',f)},onClose:()=>{}}).openIframe();
  }
 };
 $('#drawer').onchange=e=>{if(e.target.id==='zn')upd()};
+
+/* ---- Customer accounts (Firebase) ---- */
+let ZA=null,user=null,prof={},acctView='in';
+const msgFor=c=>({'auth/invalid-credential':'Email or password is not correct.','auth/wrong-password':'Email or password is not correct.','auth/user-not-found':'Email or password is not correct.','auth/email-already-in-use':'An account with this email already exists. Please log in.','auth/weak-password':'Password must be at least 6 characters.','auth/invalid-email':'Please enter a valid email address.','auth/too-many-requests':'Too many attempts. Please wait a moment and try again.'}[c]||'Something went wrong. Please try again.');
+const setBtn=()=>{$('#acctBtn').textContent=user?(String(prof.name||'Account').split(' ')[0]):'Log in'};
+function openAcct(){drawAcct();$('#acct').classList.add('open');$('#ov').classList.add('open')}
+async function initAccount(){
+ if(!S.firebase||!S.firebase.apiKey)return;
+ try{
+  const b='https://www.gstatic.com/firebasejs/10.12.2/';
+  const [App,A,F]=await Promise.all([import(b+'firebase-app.js'),import(b+'firebase-auth.js'),import(b+'firebase-firestore.js')]);
+  const app=App.initializeApp(S.firebase);
+  ZA={A,F,auth:A.getAuth(app),db:F.getFirestore(app)};
+ }catch(e){return}
+ $('#acctBtn').hidden=false;$('#acctBtn').onclick=openAcct;
+ ZA.A.onAuthStateChanged(ZA.auth,async u=>{
+  user=u;
+  if(!u){prof={};acctView='in'}
+  else{
+   if(acctView==='in'||acctView==='up')acctView='det';
+   try{const d=await ZA.F.getDoc(ZA.F.doc(ZA.db,'users',u.uid));if(d.exists())prof=d.data()}catch(e){}
+  }
+  setBtn();
+  if($('#acct').classList.contains('open'))drawAcct();
+  if(step==='form'&&$('#drawer').classList.contains('open'))drawCart();
+ });
+}
+function drawAcct(){
+ let h='<button class="x" id="ax" aria-label="Close">&times;</button>';
+ if(!user){
+  const su=acctView==='up';
+  h+=`<h2>${su?'Create account':'Log in'}</h2><div class="chips" style="margin:14px 0"><button data-v="in" class="${su?'':'on'}">Log in</button><button data-v="up" class="${su?'on':''}">Create account</button></div>`
+  +(su?'<label>Full name</label><input id="an" autocomplete="name"><label>Phone number</label><input id="ap" type="tel" autocomplete="tel">':'')
+  +`<label>Email</label><input id="ae" type="email" autocomplete="email"><label>Password</label><input id="aw" type="password" autocomplete="${su?'new-password':'current-password'}">`
+  +'<p class="note" id="aerr" style="color:var(--wine);opacity:1"></p><button class="btn" id="asub" style="width:100%;margin-top:14px">'+(su?'Create account':'Log in')+'</button>'
+  +(su?'':'<button class="lnk" id="afg">Forgot password?</button>');
+ }else{
+  const o=acctView==='ord';
+  h+=`<h2>My account</h2><p class="note">${esc(user.email)}</p><div class="chips" style="margin:14px 0"><button data-v="det" class="${o?'':'on'}">My details</button><button data-v="ord" class="${o?'on':''}">My orders</button></div>`;
+  h+=o?'<div id="olist"><p class="note">Loading...</p></div>':
+   `<label>Full name</label><input id="an" value="${esc(prof.name||'')}"><label>Phone number</label><input id="ap" type="tel" value="${esc(prof.phone||'')}"><label>Delivery area</label><select id="az">${S.delivery.map((d,i)=>`<option value="${i}" ${prof.zone===i?'selected':''}>${esc(d.name)}</option>`).join('')}</select><label>Delivery address</label><textarea id="aa" rows="3">${esc(prof.address||'')}</textarea><p class="note" id="aerr"></p><button class="btn" id="asv" style="width:100%;margin-top:14px">Save details</button>`;
+  h+='<button class="lnk" id="aout" style="display:block;margin-top:18px">Log out</button>';
+ }
+ $('#acct').innerHTML=h;
+ if(user&&acctView==='ord')loadOrders();
+}
+async function loadOrders(){
+ try{
+  const q=ZA.F.query(ZA.F.collection(ZA.db,'orders'),ZA.F.where('uid','==',user.uid));
+  const L=(await ZA.F.getDocs(q)).docs.map(d=>d.data()).sort((a,b)=>(b.created?.seconds||0)-(a.created?.seconds||0));
+  $('#olist').innerHTML=L.length?L.map(o=>`<div class="row" style="display:block"><b>${o.created?new Date(o.created.seconds*1000).toLocaleDateString('en-NG'):'Just now'}</b> <span class="note">${esc(o.status)}</span><small>${o.items.map(i=>`${esc(i.name)} (${esc(i.color)}, ${esc(i.size)}) x${i.q}`).join('<br>')}</small><div>Total: ${fmt(o.total)}</div></div>`).join(''):'<p class="note">No orders yet.</p>';
+ }catch(e){$('#olist').innerHTML='<p class="note">Could not load your orders. Please try again.</p>'}
+}
+$('#acct').onclick=async e=>{
+ const t=e.target,v=s=>$(s).value.trim(),err=m=>{const x=$('#aerr');if(x)x.textContent=m};
+ if(t.id==='ax')return closeAll();
+ if(t.dataset.v){acctView=t.dataset.v;return drawAcct()}
+ if(!ZA)return;
+ try{
+  if(t.id==='aout')return ZA.A.signOut(ZA.auth);
+  if(t.id==='asub'){
+   const em=v('#ae'),pw=$('#aw').value;
+   if(!em||!pw)return err('Please enter your email and password.');
+   if(acctView==='up'){
+    const n=v('#an'),p=v('#ap');
+    if(!n||!p)return err('Please enter your name and phone number.');
+    t.disabled=true;
+    const c=await ZA.A.createUserWithEmailAndPassword(ZA.auth,em,pw);
+    prof={name:n,phone:p};
+    await ZA.F.setDoc(ZA.F.doc(ZA.db,'users',c.user.uid),prof);setBtn();drawAcct();
+   }else{t.disabled=true;await ZA.A.signInWithEmailAndPassword(ZA.auth,em,pw)}
+  }
+  if(t.id==='afg'){
+   const em=v('#ae');if(!em)return err('Type your email above first.');
+   await ZA.A.sendPasswordResetEmail(ZA.auth,em);err('Password reset email sent. Please check your inbox.');
+  }
+  if(t.id==='asv'){
+   prof={name:v('#an'),phone:v('#ap'),zone:+$('#az').value,address:v('#aa')};
+   await ZA.F.setDoc(ZA.F.doc(ZA.db,'users',user.uid),prof,{merge:true});setBtn();err('Saved.');
+  }
+ }catch(x){if(t.disabled)t.disabled=false;err(msgFor(x.code))}
+};
+async function saveOrder(f,status,ref){
+ if(!ZA||!user)return;
+ const items=lines().map(i=>({name:i.p.name,color:i.color,size:i.size,q:i.q,price:i.p.price}));
+ const o={uid:user.uid,email:user.email,name:f.n,phone:f.p,address:f.a,area:f.z.name,items,subtotal:sub(),delivery:f.z.fee,total:sub()+f.z.fee,status,ref:ref||'',created:ZA.F.serverTimestamp()};
+ try{
+  await ZA.F.addDoc(ZA.F.collection(ZA.db,'orders'),o);
+  prof={...prof,name:f.n,phone:f.p,address:f.a,zone:f.zi};
+  await ZA.F.setDoc(ZA.F.doc(ZA.db,'users',user.uid),prof,{merge:true});setBtn();
+ }catch(e){}
+}
 </script>
 </body>
 </html>
