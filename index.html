@@ -198,7 +198,7 @@ input,select,textarea{width:100%;padding:11px 12px;border:1px solid #d9aeb0;back
 const $=s=>document.querySelector(s);
 const fmt=n=>'\u20A6'+Number(n).toLocaleString('en-NG');
 let S={},P=[],cart=JSON.parse(localStorage.getItem('zeehaCart')||'[]'),cat='All',sel={},step='cart',cur=null;
-const save=()=>{localStorage.setItem('zeehaCart',JSON.stringify(cart));$('#cnt').textContent=cart.reduce((a,i)=>a+i.q,0)};
+const save=()=>{localStorage.setItem('zeehaCart',JSON.stringify(cart));$('#cnt').textContent=cart.reduce((a,i)=>a+i.q,0);syncCart()};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const pic=(p,i=0)=>p.images&&p.images[i]?`<img src="${esc(p.images[i])}" alt="${esc(p.name)}" loading="lazy">`:`<span class="z">Z</span>`;
 const wa=t=>`https://wa.me/${S.whatsapp}${t?'?text='+encodeURIComponent(t):''}`;
@@ -269,7 +269,7 @@ function drawCart(){
  if(!L.length){$('#dbody').innerHTML='<div class="empty">Your bag is empty.<br><br><a class="btn ghost" href="#shop" onclick="closeAll()">Browse the shop</a></div>';$('#dfoot').innerHTML='';return}
  if(step==='cart'){
   $('#dbody').innerHTML=L.map(i=>`<div class="item"><div class="ph">${pic(i.p)}</div><div><b>${esc(i.p.name)}</b><small>${esc(i.color)} / ${esc(i.size)} / Qty ${i.q}</small><button class="rm" data-rm="${esc(i.k)}">Remove</button></div><div>${fmt(i.p.price*i.q)}</div></div>`).join('');
-  $('#dfoot').innerHTML=`<div class="tot big"><span>Subtotal</span><span>${fmt(sub())}</span></div><button class="btn" id="go" style="width:100%">Checkout</button><p class="note">Delivery is added at checkout.</p>`;
+  $('#dfoot').innerHTML=`<div class="tot big"><span>Subtotal</span><span>${fmt(sub())}</span></div><button class="btn" id="go" style="width:100%">Checkout</button><p class="note">Delivery is added at checkout.</p>${ZA&&!user?'<p class="note">Want to buy later? <a href="#" id="loginHint">Log in or create an account</a> to keep your bag saved on any device.</p>':ZA?'<p class="note">Your bag is saved to your account.</p>':''}`;
  }else{
   $('#dbody').innerHTML=`${ZA&&!user?'<p class="note">Have an account? <a href="#" id="loginHint">Log in</a> to fill in your details and keep this order in your history.</p>':''}<label>Full name</label><input id="fn" autocomplete="name">
   <label>Phone number</label><input id="ph" type="tel" autocomplete="tel">
@@ -319,7 +319,9 @@ $('#drawer').onclick=e=>{
 $('#drawer').onchange=e=>{if(e.target.id==='zn')upd()};
 
 /* ---- Customer accounts (Firebase) ---- */
-let ZA=null,user=null,prof={},acctView='in';
+let ZA=null,user=null,prof={},acctView='in',cartReady=false,st;
+function syncCart(){if(!ZA||!user||!cartReady)return;clearTimeout(st);const u=user.uid;st=setTimeout(()=>ZA.F.setDoc(ZA.F.doc(ZA.db,'users',u),{cart},{merge:true}).catch(()=>{}),600)}
+function mergeCart(a){(a||[]).forEach(i=>{const x=cart.find(c=>c.k===i.k);if(x)x.q=Math.max(x.q,i.q);else cart.push(i)})}
 const msgFor=c=>({'auth/invalid-credential':'Email or password is not correct.','auth/wrong-password':'Email or password is not correct.','auth/user-not-found':'Email or password is not correct.','auth/email-already-in-use':'An account with this email already exists. Please log in.','auth/weak-password':'Password must be at least 6 characters.','auth/invalid-email':'Please enter a valid email address.','auth/too-many-requests':'Too many attempts. Please wait a moment and try again.'}[c]||'Something went wrong. Please try again.');
 const setBtn=()=>{$('#acctBtn').textContent=user?(String(prof.name||'Account').split(' ')[0]):'Log in'};
 function openAcct(){drawAcct();$('#acct').classList.add('open');$('#ov').classList.add('open')}
@@ -333,15 +335,19 @@ async function initAccount(){
  }catch(e){return}
  $('#acctBtn').hidden=false;$('#acctBtn').onclick=openAcct;
  ZA.A.onAuthStateChanged(ZA.auth,async u=>{
-  user=u;
-  if(!u){prof={};acctView='in'}
+  const had=!!user;user=u;cartReady=false;
+  if(!u){prof={};acctView='in';if(had){cart=[];save()}}
   else{
    if(acctView==='in'||acctView==='up')acctView='det';
-   try{const d=await ZA.F.getDoc(ZA.F.doc(ZA.db,'users',u.uid));if(d.exists())prof=d.data()}catch(e){}
+   try{
+    const d=await ZA.F.getDoc(ZA.F.doc(ZA.db,'users',u.uid));
+    if(d.exists()){const {cart:sc,...r}=d.data();prof=r;mergeCart(sc)}
+    cartReady=true;save();
+   }catch(e){}
   }
   setBtn();
   if($('#acct').classList.contains('open'))drawAcct();
-  if(step==='form'&&$('#drawer').classList.contains('open'))drawCart();
+  if($('#drawer').classList.contains('open')&&step!=='done')drawCart();
  });
 }
 function drawAcct(){
@@ -386,7 +392,7 @@ $('#acct').onclick=async e=>{
     t.disabled=true;
     const c=await ZA.A.createUserWithEmailAndPassword(ZA.auth,em,pw);
     prof={name:n,phone:p};
-    await ZA.F.setDoc(ZA.F.doc(ZA.db,'users',c.user.uid),prof);setBtn();drawAcct();
+    await ZA.F.setDoc(ZA.F.doc(ZA.db,'users',c.user.uid),prof,{merge:true});setBtn();drawAcct();
    }else{t.disabled=true;await ZA.A.signInWithEmailAndPassword(ZA.auth,em,pw)}
   }
   if(t.id==='afg'){
