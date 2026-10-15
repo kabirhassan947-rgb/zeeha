@@ -22,7 +22,15 @@
         "eta": "2 to 3 working days"
       }
     ],
-    "phone": ""
+    "phone": "",
+    "firebase": {
+      "apiKey": "AIzaSyDbm_kPtgtRyIi_wbRCHMe7hgdXht_OQyA",
+      "authDomain": "zeeha-1f15a.firebaseapp.com",
+      "projectId": "zeeha-1f15a",
+      "storageBucket": "zeeha-1f15a.firebasestorage.app",
+      "messagingSenderId": "779816947277",
+      "appId": "1:779816947277:web:aa4484bb151dde661dd604"
+    }
   },
   "products": [
     {
