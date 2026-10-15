@@ -20,11 +20,23 @@ label{font-size:.8rem;display:block;margin-bottom:2px}
 input,textarea,select{width:100%;padding:8px;border:1px solid #d9aeb0;font:inherit}
 .help{background:#fff;border-left:4px solid var(--wine);padding:12px 16px;margin:14px 0;font-size:.92rem}
 h2{color:var(--wine);margin:22px 0 10px;font-family:Georgia,serif;font-weight:500}
+[hidden]{display:none!important}
+.tabs{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}
 @media(max-width:600px){.p{grid-template-columns:1fr}}
 </style>
 </head>
 <body><div class="w">
 <h1>Zeeha admin</h1>
+<div id="gate" class="p" hidden style="max-width:420px;margin:40px auto;display:block">
+ <h2 style="margin-top:0">Admin login</h2>
+ <label>Email</label><input id="ge" type="email" autocomplete="email">
+ <label style="margin-top:10px">Password</label><input id="gp" type="password" autocomplete="current-password">
+ <p id="gmsg" style="color:#6b0f2a;font-size:.9rem;margin:10px 0"></p>
+ <button id="glog">Log in</button> <button class="g" id="gfg">Forgot password?</button>
+</div>
+<div id="app" hidden>
+<div class="tabs"><button data-tab="P">Products &amp; settings</button><button class="g" data-tab="O">Orders</button><button class="g" id="lo" style="margin-left:auto">Log out</button></div>
+<div id="tabP">
 <div class="help"><b>How to update your shop:</b> 1) Add or change products below. 2) Click <b>Download products.json</b>. 3) On GitHub, open your repository, click <b>Add file &gt; Upload files</b>, drop in the new <b>products.json</b> (and any new photos into the <b>images</b> folder), then click <b>Commit changes</b>. Your shop updates in about a minute. Photos: write the file path, for example <code>images/noor-1.jpg</code>, one per line.</div>
 <div class="bar"><button id="add">+ New product</button><button id="dl">Download products.json</button><button class="g" id="load">Load a products.json file</button><input type="file" id="file" accept=".json" hidden></div>
 <h2>Shop settings</h2>
@@ -32,11 +44,19 @@ h2{color:var(--wine);margin:22px 0 10px;font-family:Georgia,serif;font-weight:50
 <h2>Products</h2>
 <div id="list"></div>
 </div>
+<div id="tabO" hidden>
+ <h2>Customer orders</h2>
+ <p style="font-size:.9rem;margin-bottom:10px">Orders from customers who were logged in. Change the status and it updates for the customer too. Always check Paystack before you ship.</p>
+ <button id="rf">Refresh orders</button>
+ <div id="ol" style="margin-top:14px"></div>
+</div>
+</div>
+</div>
 <script>
 const $=s=>document.querySelector(s);
 let D={settings:{delivery:[]},products:[]};
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-fetch('products.json').then(r=>r.json()).then(d=>{D=d;draw()}).catch(()=>draw());
+fetch('products.json').then(r=>r.json()).then(d=>{D=d;draw()}).catch(()=>draw()).then(gateInit);
 function draw(){
  const s=D.settings;
  $('#set').innerHTML=`<div><label>WhatsApp number (234..., no + or spaces)</label><input data-s="whatsapp" value="${esc(s.whatsapp)}"></div>
@@ -79,6 +99,64 @@ $('#dl').onclick=()=>{
 };
 $('#load').onclick=()=>$('#file').click();
 $('#file').onchange=e=>{const r=new FileReader();r.onload=()=>{D=JSON.parse(r.result);draw()};r.readAsText(e.target.files[0])};
+
+/* ---- admin login + orders ---- */
+let ZA=null;
+const ST=['Sent on WhatsApp, awaiting payment','Paid online','Packed','Shipped','Delivered','Cancelled'];
+async function gateInit(){
+ const fb=D.settings&&D.settings.firebase;
+ if(!fb||!fb.apiKey){$('#app').hidden=false;return}
+ $('#gate').hidden=false;
+ try{
+  const b='https://www.gstatic.com/firebasejs/10.12.2/';
+  const [App,A,F]=await Promise.all([import(b+'firebase-app.js'),import(b+'firebase-auth.js'),import(b+'firebase-firestore.js')]);
+  const app=App.initializeApp(fb);ZA={A,F,auth:A.getAuth(app),db:F.getFirestore(app)};
+ }catch(e){$('#gmsg').textContent='Could not reach Firebase. Check your internet and refresh.';return}
+ ZA.A.onAuthStateChanged(ZA.auth,async u=>{
+  if(!u){$('#app').hidden=true;$('#gate').hidden=false;return}
+  try{await ZA.F.getDocs(ZA.F.query(ZA.F.collection(ZA.db,'orders'),ZA.F.limit(1)))}
+  catch(e){$('#gmsg').textContent='This account is not an admin account.';await ZA.A.signOut(ZA.auth);return}
+  $('#gate').hidden=true;$('#app').hidden=false;loadOrders();
+ });
+}
+$('#glog').onclick=async()=>{
+ if(!ZA)return;
+ const e=$('#ge').value.trim(),p=$('#gp').value;
+ if(!e||!p){$('#gmsg').textContent='Enter your email and password.';return}
+ $('#gmsg').textContent='';
+ try{await ZA.A.signInWithEmailAndPassword(ZA.auth,e,p)}catch(x){$('#gmsg').textContent='Email or password is not correct.'}
+};
+$('#gfg').onclick=async()=>{
+ if(!ZA)return;
+ const e=$('#ge').value.trim();
+ if(!e){$('#gmsg').textContent='Type your email first.';return}
+ try{await ZA.A.sendPasswordResetEmail(ZA.auth,e);$('#gmsg').textContent='Password reset email sent.'}catch(x){$('#gmsg').textContent='Could not send the email.'}
+};
+$('#lo').onclick=()=>ZA&&ZA.A.signOut(ZA.auth);
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{
+ ['P','O'].forEach(k=>$('#tab'+k).hidden=k!==b.dataset.tab);
+ document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('g',x!==b));
+});
+$('#rf').onclick=()=>loadOrders();
+async function loadOrders(){
+ if(!ZA){$('#ol').textContent='Switch on customer accounts first (see FIREBASE-SETUP.md).';return}
+ $('#ol').textContent='Loading...';
+ try{
+  const s=await ZA.F.getDocs(ZA.F.collection(ZA.db,'orders'));
+  const L=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.created?.seconds||0)-(a.created?.seconds||0));
+  $('#ol').innerHTML=L.length?L.map(o=>{
+   const opts=(ST.includes(o.status)?ST:[o.status,...ST]).map(x=>`<option ${x===o.status?'selected':''}>${esc(x)}</option>`).join('');
+   return `<div class="p" data-oid="${o.id}"><div class="f"><b>${o.created?new Date(o.created.seconds*1000).toLocaleString('en-NG'):''}</b> &middot; ${esc(o.name)} &middot; <a href="tel:${esc(o.phone)}">${esc(o.phone)}</a> &middot; ${esc(o.email)}</div><div class="f">${esc(o.address)} (${esc(o.area)})</div><div class="f">${(o.items||[]).map(i=>`${esc(i.name)} (${esc(i.color)}, ${esc(i.size)}) x${i.q}`).join('<br>')}</div><div><b>Total: &#8358;${Number(o.total).toLocaleString('en-NG')}</b><br><small>Paystack ref: ${esc(o.ref||'none')}</small></div><div><label>Status</label><select data-st>${opts}</select></div></div>`;
+  }).join(''):'<p>No orders yet.</p>';
+ }catch(e){$('#ol').textContent='Could not load orders.'}
+}
+document.addEventListener('change',async e=>{
+ const t=e.target;
+ if(t.dataset.st===undefined)return;
+ const id=t.closest('[data-oid]').dataset.oid;
+ try{await ZA.F.updateDoc(ZA.F.doc(ZA.db,'orders',id),{status:t.value});t.style.outline='2px solid #2a8a3a'}
+ catch(x){alert('Could not update this order. Please try again.')}
+});
 </script>
 </body>
 </html>
